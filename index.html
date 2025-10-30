@@ -1,0 +1,799 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🌍%3C/text%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Geography Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0"
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+      import ReactDOM from 'react-dom/client';
+
+      // --- From constants.ts ---
+      const IMAGE_URLS = {
+        mapElements: './image1.jpg',
+        compassRose: './image2.jpg',
+        parallelsMeridians: './image3.jpg',
+        earthAxis: './image4.jpg',
+        majorParallels: './image5.jpg',
+        europePeninsulas: './image6.jpg',
+        europeSeas: './image7.jpg',
+        europeLimits: './image8.jpg',
+        iberianPeninsula: './image9.jpg',
+      };
+
+      const sections = [
+        {
+          title: "Definições Básicas",
+          questions: [
+            { id: 'q1', type: 'single-choice', text: '1. Define globo terrestre', points: 1, options: [
+                { id: '1a', text: 'representação de toda a superfície terrestre de forma esférica' },
+                { id: '1b', text: 'representação de toda a superfície terrestre de forma plana' },
+                { id: '1c', text: 'representação de uma parte da terra de forma plana' },
+                { id: '1d', text: 'fotografia tirada na Terra através de uma câmara aérea, a partir de um avião ou helicóptero' },
+                { id: '1e', text: 'imagem obtida a partir do espaço, através de um satélite artificial' },
+              ], correctAnswer: '1a' },
+            { id: 'q2', type: 'single-choice', text: '2. Define planisfério', points: 1, options: [
+                { id: '2a', text: 'representação de toda a superfície terrestre de forma esférica' },
+                { id: '2b', text: 'representação de toda a superfície terrestre de forma plana' },
+                { id: '2c', text: 'representação de uma parte da terra de forma plana' },
+                { id: '2d', text: 'fotografia tirada na Terra através de uma câmara aérea, a partir de um avião ou helicóptero' },
+                { id: '2e', text: 'imagem obtida a partir do espaço, através de um satélite artificial' },
+              ], correctAnswer: '2b' },
+            { id: 'q3', type: 'single-choice', text: '3. Define mapa', points: 1, options: [
+                { id: '3a', text: 'representação de toda a superfície terrestre de forma esférica' },
+                { id: '3b', text: 'representação de toda a superfície terrestre de forma plana' },
+                { id: '3c', text: 'representação de uma parte da terra de forma plana' },
+                { id: '3d', text: 'fotografia tirada na Terra através de uma câmara aérea, a partir de um avião ou helicóptero' },
+                { id: '3e', text: 'imagem obtida a partir do espaço, através de um satélite artificial' },
+              ], correctAnswer: '3c' },
+            { id: 'q4', type: 'single-choice', text: '4. Define fotografia aérea', points: 1, options: [
+                { id: '4a', text: 'representação de toda a superfície terrestre de forma esférica' },
+                { id: '4b', text: 'representação de toda a superfície terrestre de forma plana' },
+                { id: '4c', text: 'representação de uma parte da terra de forma plana' },
+                { id: '4d', text: 'fotografia tirada na Terra através de uma câmara aérea, a partir de um avião ou helicóptero' },
+                { id: '4e', text: 'imagem obtida a partir do espaço, através de um satélite artificial' },
+              ], correctAnswer: '4d' },
+            { id: 'q5', type: 'single-choice', text: '5. Define imagem de satélite', points: 1, options: [
+                { id: '5a', text: 'representação de toda a superfície terrestre de forma esférica' },
+                { id: '5b', text: 'representação de toda a superfície terrestre de forma plana' },
+                { id: '5c', text: 'representação de uma parte da terra de forma plana' },
+                { id: '5d', text: 'fotografia tirada na Terra através de uma câmara aérea, a partir de um avião ou helicóptero' },
+                { id: '5e', text: 'imagem obtida a partir do espaço, através de um satélite artificial' },
+              ], correctAnswer: '5e' },
+          ],
+        },
+        {
+          title: "Vantagens e Desvantagens",
+          questions: [
+            { id: 'q6', type: 'association', text: '6. Identifica as vantagens e desvantagens do Globo Terrestre e dos Planisférios', points: 6, 
+              rows: [
+                'Representa toda a superfície da Terra em forma esférica, aquela que se aproxima mais da forma real da Terra',
+                'É fácil de arrumar e transportar e permite observar toda a superfície da Terra ao mesmo tempo',
+                'É difícil de arrumar e de transportar e não permite ver toda a superfície da Terra ao mesmo tempo',
+                'Apresenta algumas distorções da realidade por representar toda a superfície da Terra de forma plana',
+                'Não permite visualizar ao mesmo tempo toda a superfície terrestre.',
+              ],
+              cols: ['Globo Terrestre', 'Planisfério'],
+              correctAnswer: { '0': 'Globo Terrestre', '1': 'Planisfério', '2': 'Globo Terrestre', '3': 'Planisfério', '4': 'Globo Terrestre' }
+            },
+          ],
+        },
+        {
+          title: "Elementos do Mapa",
+          questions: [
+              { id: 'q7', type: 'image-label', text: '7. Faz a legenda dos elementos do mapa', image: IMAGE_URLS.mapElements, points: 4, 
+                  items: ['1', '2', '3', '4'],
+                  labels: ['Orientação', 'Legenda', 'Escala', 'Título'],
+                  correctAnswer: { 'Orientação': '1', 'Legenda': '2', 'Título': '4', 'Escala': '3' } // Corrected based on visual layout
+              },
+              { id: 'q8', type: 'single-choice', text: '8. Define O Título...', points: 1, options: [
+                      {id: '8a', text: 'apresenta de forma breve, simples e clara o tema, assunto, espaço e/ou tempo representado no mapa'},
+                      {id: '8b', text: 'apresenta o significado dos símbolos e/ou das cores que surgem nos mapas'},
+                      {id: '8c', text: 'indica a direção do mapa e pode ser representada por uma seta indicando o Norte ou uma rosa dos ventos'},
+                      {id: '8d', text: 'indica quantas vezes a realidade foi reduzida para ser representada no mapa'},
+                  ], correctAnswer: '8a'
+              },
+              { id: 'q9', type: 'single-choice', text: '9. Define A Legenda...', points: 1, options: [
+                      {id: '9a', text: 'apresenta de forma breve, simples e clara o tema, assunto, espaço e/ou tempo representado no mapa'},
+                      {id: '9b', text: 'apresenta o significado dos símbolos e/ou das cores que surgem nos mapas'},
+                      {id: '9c', text: 'indica a direção do mapa e pode ser representada por uma seta indicando o Norte ou uma rosa dos ventos'},
+                      {id: '9d', text: 'indica quantas vezes a realidade foi reduzida para ser representada no mapa'},
+                  ], correctAnswer: '9b'
+              },
+              { id: 'q10', type: 'single-choice', text: '10. Define A Orientação...', points: 1, options: [
+                      {id: '10a', text: 'apresenta de forma breve, simples e clara o tema, assunto, espaço e/ou tempo representado no mapa'},
+                      {id: '10b', text: 'apresenta o significado dos símbolos e/ou das cores que surgem nos mapas'},
+                      {id: '10c', text: 'indica a direção do mapa e pode ser representada por uma seta indicando o Norte ou uma rosa dos ventos'},
+                      {id: '10d', text: 'indica quantas vezes a realidade foi reduzida para ser representada no mapa'},
+                  ], correctAnswer: '10c'
+              },
+              { id: 'q11', type: 'single-choice', text: '11. Define A Escala...', points: 1, options: [
+                      {id: '11a', text: 'apresenta de forma breve, simples e clara o tema, assunto, espaço e/ou tempo representado no mapa'},
+                      {id: '11b', text: 'apresenta o significado dos símbolos e/ou das cores que surgem nos mapas'},
+                      {id: '11c', text: 'indica a direção do mapa e pode ser representada por uma seta indicando o Norte ou uma rosa dos ventos'},
+                      {id: '11d', text: 'indica quantas vezes a realidade foi reduzida para ser representada no mapa'},
+                  ], correctAnswer: '11d'
+              },
+          ]
+        },
+        {
+            title: "Rosa dos Ventos",
+            questions: [
+              { id: 'q12', type: 'image-label', text: '12. Faz a legenda da Rosa dos Ventos...', image: IMAGE_URLS.compassRose, points: 8,
+                  items: ['1','2','3','4','5','6','7','8'],
+                  labels: ['Norte', 'Nordeste', 'Este', 'Sueste', 'Sul', 'Sudoeste', 'Oeste', 'Noroeste'],
+                  correctAnswer: { 'Norte': '1', 'Este': '3', 'Sul': '5', 'Oeste': '7', 'Nordeste': '2', 'Sueste': '4', 'Sudoeste': '6', 'Noroeste': '8' }
+              },
+              { id: 'q13', type: 'association', text: '13. Identifica os outros nomes dos pontos cardeais', points: 8,
+                  rows: ['Setentrional', 'Boreal', 'Meridional', 'Austral', 'Oriente', 'Nascente', 'Ocidente', 'Poente'],
+                  cols: ['Norte', 'Sul', 'Este', 'Oeste'],
+                  correctAnswer: { '0': 'Norte', '1': 'Norte', '2': 'Sul', '3': 'Sul', '4': 'Este', '5': 'Este', '6': 'Oeste', '7': 'Oeste' }
+              }
+            ]
+        },
+        {
+            title: "Escala Numérica",
+            questions: [
+                { id: 'q14', type: 'multi-choice', text: '14. Seleciona formas corretas de representar uma escala numérica', points: 2,
+                    options: [
+                        {id: '14a', text: '1/10 000 000'},
+                        {id: '14b', text: '1:10 000 000'},
+                        {id: '14c', text: '1x 10 000 000'},
+                        {id: '14d', text: '1+ 10 000 000'},
+                    ],
+                    correctAnswer: ['14a', '14b']
+                },
+                { id: 'q15', type: 'association', text: '15. Identifica as afirmações verdadeiras e falsas', points: 4,
+                  rows: [
+                    'Mapas com grande escala apresentam uma área reduzida, mas com bastante pormenor',
+                    'Mapas com grande escala apresentam uma maior área, mas com pouco pormenor',
+                    'Mapas com pequena escala apresentam uma maior área, mas com pouco pormenor',
+                    'Mapas com pequena escala apresentam uma área reduzida, mas com bastante pormenor'
+                  ],
+                  cols: ['Verdadeira', 'Falsa'],
+                  correctAnswer: { '0': 'Verdadeira', '1': 'Falsa', '2': 'Verdadeira', '3': 'Falsa'}
+                }
+            ]
+        },
+        {
+            title: 'Esfera Terrestre',
+            questions: [
+              { id: 'q16', type: 'image-label', text: '16. Faz a legenda da figura', image: IMAGE_URLS.parallelsMeridians, points: 2,
+                  items: ['1', '2'],
+                  labels: ['Paralelos', 'Meridianos'],
+                  correctAnswer: { 'Paralelos': '1', 'Meridianos': '2' }
+              },
+              { id: 'q17', type: 'image-label', text: '17. Faz a legenda da figura', image: IMAGE_URLS.earthAxis, points: 3,
+                  items: ['1', '2', '3'],
+                  labels: ['Hemisfério Norte', 'Equador', 'Hemisfério Sul'],
+                  correctAnswer: { 'Hemisfério Norte': '1', 'Equador': '2', 'Hemisfério Sul': '3' }
+              },
+              { id: 'q18', type: 'image-label', text: '18. Faz a legenda dos principais paralelos', image: IMAGE_URLS.majorParallels, points: 4,
+                  items: ['A', 'B', 'C', 'D'],
+                  labels: ['Círculo Polar Ártico', 'Trópico de Câncer', 'Trópico de Capricórnio', 'Círculo Polar Antártico'],
+                  correctAnswer: { 'Círculo Polar Ártico': 'A', 'Trópico de Câncer': 'B', 'Trópico de Capricórnio': 'C', 'Círculo Polar Antártico': 'D' }
+              }
+            ]
+        },
+        {
+            title: 'Elementos Geométricos',
+            questions: [
+                { id: 'q19', type: 'single-choice', text: '19. O que é o Equador?', points: 1, options: [
+                    {id: '19a', text: 'Linha imaginária que divide a Terra em dois hemisférios (hemisfério norte e hemisfério sul)'},
+                    {id: '19b', text: 'Linha imaginária que passa pelo centro da Terra, unindo o Polo Norte e o Polo Sul'},
+                    {id: '19c', text: 'Linha imaginária perpendicular ao equador que passa pelos polos'},
+                    {id: '19d', text: 'Linhas imaginárias paralelas ao equador'},
+                ], correctAnswer: '19a' },
+                { id: 'q20', type: 'single-choice', text: '20. O que é o Eixo da Terra?', points: 1, options: [
+                    {id: '20a', text: 'Linha imaginária que divide a Terra em dois hemisférios (hemisfério norte e hemisfério sul)'},
+                    {id: '20b', text: 'Linha imaginária que passa pelo centro da Terra, unindo o Polo Norte e o Polo Sul'},
+                    {id: '20c', text: 'Linha imaginária perpendicular ao equador que passa pelos polos'},
+                    {id: '20d', text: 'Linhas imaginárias paralelas ao equador'},
+                ], correctAnswer: '20b' },
+                { id: 'q21', type: 'single-choice', text: '21. O que é um Meridiano?', points: 1, options: [
+                    {id: '21a', text: 'Linha imaginária que divide a Terra em dois hemisférios (hemisfério norte e hemisfério sul)'},
+                    {id: '21b', text: 'Linha imaginária que passa pelo centro da Terra, unindo o Polo Norte e o Polo Sul'},
+                    {id: '21c', text: 'Linha imaginária perpendicular ao equador que passa pelos polos'},
+                    {id: '21d', text: 'Linhas imaginárias paralelas ao equador'},
+                ], correctAnswer: '21c' },
+                { id: 'q22', type: 'single-choice', text: '22. O que é um Paralelo?', points: 1, options: [
+                    {id: '22a', text: 'Linha imaginária que divide a Terra em dois hemisférios (hemisfério norte e hemisfério sul)'},
+                    {id: '22b', text: 'Linha imaginária que passa pelo centro da Terra, unindo o Polo Norte e o Polo Sul'},
+                    {id: '22c', text: 'Linha imaginária perpendicular ao equador que passa pelos polos'},
+                    {id: '22d', text: 'Linhas imaginárias paralelas ao equador'},
+                ], correctAnswer: '22d' },
+            ]
+        },
+        {
+            title: "Localização",
+            questions: [
+                {id: 'q23', type: 'single-choice', text: '23. O meridiano de referência que divide a Terra em duas partes designa-se...', points: 1, options: [{id: '23a', text: 'meridiano de Câncer'},{id: '23b', text: 'meridiano de Capricórnio'},{id: '23c', text: 'meridiano de Greenwich'}], correctAnswer: '23c' },
+                {id: 'q24', type: 'single-choice', text: '24. O círculo polar ártico situa-se no', points: 1, options: [{id: '24a', text: 'hemisfério norte'},{id: '24b', text: 'hemisfério sul'},{id: '24c', text: 'centro da Terra'}], correctAnswer: '24a'},
+                {id: 'q25', type: 'single-choice', text: '25. O círculo polar antártico situa-se no', points: 1, options: [{id: '25a', text: 'hemisfério norte'},{id: '25b', text: 'hemisfério sul'},{id: '25c', text: 'centro da Terra'}], correctAnswer: '25b'},
+                {id: 'q26', type: 'single-choice', text: '26. A linha imaginária perpendicular ao equador que une os dois polos da Terra chama-se', points: 1, options: [{id: '26a', text: 'meridiano de Câncer'},{id: '26b', text: 'trópico de Capricórnio'},{id: '26c', text: 'eixo da Terra'}], correctAnswer: '26c'},
+                {id: 'q27', type: 'multi-choice', text: '27. Identifica exemplos de paralelos', points: 4, options: [{id: '27a', text: 'Círculo Polar Ártico'},{id: '27b', text: 'Círculo Polar Antártico'},{id: '27c', text: 'Trópico de Câncer'},{id: '27d', text: 'Trópico de Capricórnio'},{id: '27e', text: 'Equador'},{id: '27f', text: 'Eixo da Terra'},{id: '27g', text: 'Meridiano de Greenwich'}], correctAnswer: ['27a', '27b', '27c', '27d', '27e']},
+                {id: 'q28', type: 'multi-choice', text: '28. Identifica as linhas imaginárias que, nas diversas representações da Terra, nos facilitam a localização de um lugar', points: 3, options: [{id: '28a', text: 'equador'},{id: '28b', text: 'paralelos'},{id: '28c', text: 'meridianos'},{id: '28d', text: 'hemisfério norte'},{id: '28e', text: 'hemisfério sul'},{id: '28f', text: 'eixo da terra'}], correctAnswer: ['28a', '28b', '28c']}
+            ]
+        },
+        {
+            title: "Geografia da Europa",
+            questions: [
+              { id: 'q29', type: 'image-label', text: '29. Faz a legenda das principais penínsulas da Europa', image: IMAGE_URLS.europePeninsulas, points: 4, items: ['1','2','3','4'], labels: ['Península Escandinava', 'Península Ibérica', 'Península Itálica', 'Península Balcânica'], correctAnswer: { 'Península Escandinava': '1', 'Península Ibérica': '2', 'Península Itálica': '3', 'Península Balcânica': '4' } },
+              { id: 'q30', type: 'image-label', text: '30. Faz a legenda dos principais mares da Europa', image: IMAGE_URLS.europeSeas, points: 5, items: ['1','2','3','4','5'], labels: ['Mar do Norte', 'Mar Báltico', 'Mar Cáspio', 'Mar Negro', 'Mar Mediterrâneo'], correctAnswer: { 'Mar do Norte': '1', 'Mar Báltico': '2', 'Mar Cáspio': '3', 'Mar Negro': '4', 'Mar Mediterrâneo': '5' } },
+              { id: 'q31', type: 'image-label', text: '31. Faz a legenda dos principais limites da Europa', image: IMAGE_URLS.europeLimits, points: 6, items: ['1','2','3','4','5','6'], labels: ['Estreito de Gibraltar', 'Pirenéus', 'Montes Urais', 'Rio Ural', 'Montes Cáucaso', 'Estreito do Bósforo'], correctAnswer: { 'Estreito de Gibraltar': '1', 'Pirenéus': '2', 'Montes Urais': '3', 'Rio Ural': '4', 'Montes Cáucaso': '5', 'Estreito do Bósforo': '6' } }
+            ]
+        },
+        {
+          title: "Península Ibérica",
+          questions: [
+              { id: 'q32', type: 'association', text: '32. Faz a legenda dos principais limites naturais da Península Ibérica', image: IMAGE_URLS.iberianPeninsula, points: 3,
+                  rows: ['Oceano Atlântico', 'Mar Mediterrâneo', 'Pirenéus'],
+                  cols: ['Norte', 'Sul', 'Oeste', 'Este', 'Nordeste'],
+                  correctAnswer: { '0': 'Oeste', '1': 'Este', '2': 'Nordeste' }
+              },
+              { id: 'q33', type: 'single-choice', text: '33. Uma Península...', points: 1, options: [{id: '33a', text: 'é uma porção de terra rodeada de água por todos os lados menos por um'},{id: '33b', text: 'é uma porção de terra rodeada de água'},{id: '33c', text: 'é uma porção de terra rodeada de água por todos os lados menos por dois'}], correctAnswer: '33a' },
+              { id: 'q34', type: 'single-choice', text: '34. O continente onde está situada a Península Ibérica denomina-se...', points: 1, options: [{id: '34a', text: 'Europa'},{id: '34b', text: 'Ásia'},{id: '34c', text: 'América'}], correctAnswer: '34a' },
+              { id: 'q35', type: 'single-choice', text: '35. Qual o continente que se situa a Sul da Europa?', points: 1, options: [{id: '35a', text: 'África'},{id: '35b', text: 'América'},{id: '35c', text: 'Ásia'}], correctAnswer: '35a' },
+              { id: 'q36', type: 'single-choice', text: '36. Qual o continente que se situa a Este da Europa?', points: 1, options: [{id: '36a', text: 'Ásia'},{id: '36b', text: 'África'},{id: '36c', text: 'América'}], correctAnswer: '36a' },
+              { id: 'q37', type: 'single-choice', text: '37. Que estreito separa a África e a Europa?', points: 1, options: [{id: '37a', text: 'Gibraltar'},{id: '37b', text: 'Bósforo'},{id: '37c', text: 'Querche'}], correctAnswer: '37a' },
+          ]
+        },
+        {
+            title: "Verdadeiro ou Falso & Portugal",
+            questions: [
+              { id: 'q38', type: 'association', text: '38. Identifica as afirmações verdadeiras e as afirmações falsas', points: 5,
+                  rows: [
+                      'O Limite natural da Europa a norte é o oceano Índico',
+                      'O rio Ural é um Limite natural da Europa a oeste',
+                      'Os limites naturais da Europa a este são os montes Urais, o rio Ural e o mar Cáspio',
+                      'O mar Negro, a cordilheira do Cáucaso e o mar Mediterrâneo são Limites naturais da Europa a sul',
+                      'O Limite natural da Europa a oeste é o oceano Atlântico'
+                  ],
+                  cols: ['Verdadeira', 'Falsa'],
+                  correctAnswer: { '0': 'Falsa', '1': 'Falsa', '2': 'Verdadeira', '3': 'Verdadeira', '4': 'Verdadeira'}
+              },
+              { id: 'q39', type: 'multi-choice', text: '39. Porque é importante a localização geográfica da Península Ibérica?', points: 2,
+                  options: [
+                      { id: '39a', text: 'como ponto de ligação entre a Europa e os restantes continentes' },
+                      { id: '39b', text: 'através da sua proximidade ao mar' },
+                      { id: '39c', text: 'por situar-se no hemisfério norte' },
+                      { id: '39d', text: 'por localizar-se no extremo sudoeste da Europa' },
+                  ], correctAnswer: ['39a', '39d']
+              },
+              { id: 'q40', type: 'association', text: '40. Portugal também é constituído por dois arquipélagos...', points: 2,
+                  rows: [ 'a oeste de Portugal continental', 'a sudoeste de Portugal continental'],
+                  cols: ['Açores', 'Madeira'],
+                  correctAnswer: { '0': 'Açores', '1': 'Madeira' }
+              }
+            ]
+        }
+      ];
+
+      const TOTAL_QUESTIONS = sections.flatMap(s => s.questions).length;
+
+      // --- From components/Timer.tsx ---
+      const Timer = ({ timeLeft }) => {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const timeColor = timeLeft < 60 ? 'text-red-400' : 'text-yellow-300';
+
+        return (
+          <div className={`bg-white/10 backdrop-blur-lg rounded-lg px-4 py-2 text-center shadow-lg ${timeColor}`}>
+            <div className="text-sm font-semibold">Tempo Restante</div>
+            <div className="text-3xl font-bold tracking-widest">
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </div>
+          </div>
+        );
+      };
+
+      // --- From components/ProgressBar.tsx ---
+      const ProgressBar = ({ progress }) => {
+        return (
+          <div>
+            <div className="flex justify-between mb-1">
+              <span className="text-base font-medium text-purple-300">Progresso</span>
+              <span className="text-sm font-medium text-purple-300">{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2.5">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-blue-500 h-2.5 rounded-full transition-all duration-500" 
+                style={{ width: `${progress}%` }}>
+              </div>
+            </div>
+          </div>
+        );
+      };
+      
+      // --- From components/Question.tsx ---
+      const QuestionComponent = ({ question, currentAnswer, onAnswerChange }) => {
+        const renderQuestionType = () => {
+          switch (question.type) {
+            case 'single-choice':
+              return (
+                <div className="space-y-3">
+                  {question.options?.map(option => (
+                    <label key={option.id} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${currentAnswer === option.id ? 'bg-purple-500/30 border-purple-400' : 'bg-white/10 border-transparent hover:border-purple-400/50'}`}>
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={option.id}
+                        checked={currentAnswer === option.id}
+                        onChange={(e) => onAnswerChange(question.id, e.target.value)}
+                        className="hidden"
+                      />
+                      <span className={`w-5 h-5 rounded-full border-2 mr-4 flex-shrink-0 ${currentAnswer === option.id ? 'border-purple-400 bg-purple-400' : 'border-gray-400'}`}></span>
+                      <span>{option.text}</span>
+                    </label>
+                  ))}
+                </div>
+              );
+            
+            case 'multi-choice':
+              const handleChange = (optionId) => {
+                const newAnswer = currentAnswer ? [...currentAnswer] : [];
+                if (newAnswer.includes(optionId)) {
+                  onAnswerChange(question.id, newAnswer.filter(id => id !== optionId));
+                } else {
+                  onAnswerChange(question.id, [...newAnswer, optionId]);
+                }
+              };
+              return (
+                <div className="space-y-3">
+                  {question.options?.map(option => (
+                    <label key={option.id} className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${(currentAnswer || []).includes(option.id) ? 'bg-purple-500/30 border-purple-400' : 'bg-white/10 border-transparent hover:border-purple-400/50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={(currentAnswer || []).includes(option.id)}
+                        onChange={() => handleChange(option.id)}
+                        className="hidden"
+                      />
+                      <span className={`w-5 h-5 rounded-md border-2 mr-4 flex-shrink-0 flex items-center justify-center ${ (currentAnswer || []).includes(option.id) ? 'border-purple-400 bg-purple-400' : 'border-gray-400'}`}>
+                        {(currentAnswer || []).includes(option.id) && <span className="text-white text-xs">✓</span>}
+                      </span>
+                      <span>{option.text}</span>
+                    </label>
+                  ))}
+                </div>
+              );
+
+            case 'association':
+            case 'image-label':
+              const isImageLabel = question.type === 'image-label';
+              const rows = isImageLabel ? question.labels : question.rows;
+              const cols = isImageLabel ? question.items : question.cols;
+              
+              const handleAssocChange = (rowIndex, colValue) => {
+                  const newAnswer = { ...(currentAnswer || {}), [rowIndex]: colValue };
+                  onAnswerChange(question.id, newAnswer);
+              };
+              
+              return (
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                          <thead>
+                              <tr>
+                                  <th className="p-3 bg-white/10"></th>
+                                  {cols.map((col, index) => <th key={index} className="p-3 bg-white/10 text-center font-semibold">{col}</th>)}
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {rows.map((row, rowIndex) => (
+                                  <tr key={rowIndex} className="border-t border-white/10">
+                                      <td className="p-3 font-medium">{row}</td>
+                                      {cols.map((colValue, colIndex) => (
+                                          <td key={colIndex} className="p-3 text-center">
+                                              <label className="inline-flex items-center justify-center w-8 h-8">
+                                                  <input
+                                                      type="radio"
+                                                      name={`${question.id}-${rowIndex}`}
+                                                      value={colValue}
+                                                      checked={currentAnswer?.[rowIndex] === colValue}
+                                                      onChange={() => handleAssocChange(rowIndex, colValue)}
+                                                      className="hidden"
+                                                  />
+                                                  <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${currentAnswer?.[rowIndex] === colValue ? 'border-purple-400 bg-purple-500/30' : 'border-gray-500 hover:border-purple-400'}`}>
+                                                      {currentAnswer?.[rowIndex] === colValue && <span className="w-3 h-3 bg-purple-400 rounded-full"></span>}
+                                                  </span>
+                                              </label>
+                                          </td>
+                                      ))}
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              );
+            default:
+              return <div>Tipo de questão não suportado.</div>;
+          }
+        };
+
+        return (
+          <div className="mb-8">
+              <h3 className="text-xl font-semibold mb-4 text-gray-200">{question.text}</h3>
+              {question.image && <img src={question.image} alt="Question visual aid" className="my-4 rounded-lg mx-auto max-h-96" />}
+              {renderQuestionType()}
+          </div>
+        );
+      };
+
+      // --- From components/QuizSection.tsx ---
+      const QuizSection = ({ section, answers, onAnswerChange }) => {
+        return (
+          <div className="space-y-10">
+            <h2 className="text-2xl font-bold text-purple-300 border-b-2 border-purple-300/30 pb-2">{section.title}</h2>
+            {section.questions.map(q => (
+              <QuestionComponent 
+                key={q.id}
+                question={q}
+                currentAnswer={answers[q.id]}
+                onAnswerChange={onAnswerChange}
+              />
+            ))}
+          </div>
+        );
+      };
+
+      // --- From components/Results.tsx ---
+      const Results = ({ name, score, totalPoints, answers }) => {
+        const certificateRef = useRef(null);
+        const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+        
+        const getFeedback = (percentage) => {
+            if (percentage >= 90) return { classification: 'Excelente 🏆', message: 'Desempenho fantástico! O seu conhecimento é impressionante.' };
+            if (percentage >= 70) return { classification: 'Muito Bom 👍', message: 'Ótimo trabalho! Mostrou um sólido conhecimento sobre o tema.' };
+            if (percentage >= 50) return { classification: 'Suficiente ✅', message: 'Bom esforço! Conseguiu a aprovação, continue a estudar.' };
+            return { classification: 'Insuficiente ❌', message: 'Não desista. Reveja os seus erros e tente novamente.' };
+        };
+
+        const { classification, message } = getFeedback(percentage);
+        const date = new Date().toLocaleDateString('pt-PT');
+
+        const allQuestions = useMemo(() => sections.flatMap(s => s.questions), []);
+        const correctAnswersCount = useMemo(() => {
+          let count = 0;
+          allQuestions.forEach(q => {
+            const userAnswer = answers[q.id];
+            if(userAnswer === undefined) return;
+            let isCorrect = false;
+              switch (q.type) {
+                case 'single-choice':
+                  isCorrect = userAnswer === q.correctAnswer;
+                  break;
+                case 'multi-choice':
+                  const correct = q.correctAnswer;
+                  const user = userAnswer;
+                  isCorrect = correct.length === user.length && correct.every(val => user.includes(val));
+                  break;
+                case 'association':
+                case 'image-label':
+                  const correctAnswers = q.correctAnswer;
+                  const userAnswers = userAnswer;
+                  isCorrect = Object.keys(correctAnswers).length > 0 && 
+                              Object.keys(correctAnswers).every(key => correctAnswers[key] === userAnswers?.[key]);
+                  break;
+              }
+              if (isCorrect) count++;
+          });
+          return count;
+        }, [answers, allQuestions]);
+
+        const handlePrint = () => {
+          const printContent = certificateRef.current?.innerHTML;
+          const printWindow = window.open('', '', 'height=600,width=800');
+          if(printWindow) {
+              printWindow.document.write('<html><head><title>Certificado</title>');
+              printWindow.document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+              printWindow.document.write('</head><body>');
+              printWindow.document.write(printContent);
+              printWindow.document.write('</body></html>');
+              printWindow.document.close();
+              printWindow.focus();
+              setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+          }
+        };
+        
+        const handleExportPDF = () => {
+          if (certificateRef.current) {
+              const { jsPDF } = jspdf;
+              const certificate = certificateRef.current;
+              html2canvas(certificate, { scale: 2 }).then((canvas) => {
+                  const imgData = canvas.toDataURL('image/png');
+                  const pdf = new jsPDF({
+                      orientation: 'landscape',
+                      unit: 'px',
+                      format: [canvas.width, canvas.height]
+                  });
+                  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                  pdf.save(`certificado-${name.replace(/\s/g, '_')}.pdf`);
+              });
+          }
+        };
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-800 text-white p-4 md:p-8 flex flex-col items-center">
+            <div className="w-full max-w-5xl">
+              <div ref={certificateRef} className="p-8 md:p-12 bg-gradient-to-br from-purple-600 to-blue-500 rounded-2xl shadow-2xl mb-8">
+                  <h1 className="text-4xl md:text-5xl font-bold text-center mb-2">Certificado de Conclusão</h1>
+                  <p className="text-center text-lg opacity-80 mb-8">Teste de Geografia</p>
+                  <p className="text-xl md:text-2xl text-center mb-4">Este certificado é atribuído a</p>
+                  <p className="text-3xl md:text-4xl font-semibold text-center text-yellow-300 mb-8">{name}</p>
+                  <div className="grid md:grid-cols-3 gap-6 text-center">
+                      <div className="bg-white/10 p-4 rounded-lg">
+                          <p className="text-lg opacity-80">Pontuação</p>
+                          <p className="text-3xl font-bold">{score} / {totalPoints}</p>
+                      </div>
+                      <div className="bg-white/10 p-4 rounded-lg">
+                          <p className="text-lg opacity-80">Percentagem</p>
+                          <p className="text-3xl font-bold">{percentage.toFixed(1)}%</p>
+                      </div>
+                      <div className="bg-white/10 p-4 rounded-lg">
+                          <p className="text-lg opacity-80">Classificação</p>
+                          <p className="text-3xl font-bold">{classification}</p>
+                      </div>
+                  </div>
+                  <p className="text-center mt-8 italic">{message}</p>
+                  <p className="text-center mt-12 text-sm opacity-70">Emitido em: {date}</p>
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 justify-center mb-8">
+                  <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                      🖨️ Imprimir Certificado
+                  </button>
+                  <button onClick={handleExportPDF} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">
+                      📄 Exportar para PDF
+                  </button>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl p-6">
+                  <h2 className="text-2xl font-bold mb-4 text-purple-300">Resumo Detalhado</h2>
+                  <div className="flex gap-8 mb-4">
+                      <p>Respostas Corretas: <span className="font-bold text-green-400">{correctAnswersCount}</span></p>
+                      <p>Respostas Incorretas: <span className="font-bold text-red-400">{allQuestions.length - correctAnswersCount}</span></p>
+                  </div>
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                      {allQuestions.map(q => {
+                          let isCorrect = false;
+                          const userAnswer = answers[q.id];
+                          switch (q.type) {
+                              case 'single-choice':
+                                  isCorrect = userAnswer === q.correctAnswer;
+                                  break;
+                              case 'multi-choice':
+                                  const correct = q.correctAnswer;
+                                  const user = userAnswer || [];
+                                  isCorrect = correct.length === user.length && correct.every(val => user.includes(val));
+                                  break;
+                              case 'association':
+                              case 'image-label':
+                                  const correctAnswers = q.correctAnswer;
+                                  const userAnswers = userAnswer || {};
+                                  isCorrect = Object.keys(correctAnswers).length > 0 && Object.keys(correctAnswers).every(key => correctAnswers[key] === userAnswers[key]);
+                                  break;
+                          }
+                          return (
+                              <div key={q.id} className={`p-3 rounded-lg ${isCorrect ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                                  <p className="font-semibold">{q.text} {isCorrect ? <span className="text-green-400"> (Correto)</span> : <span className="text-red-400"> (Incorreto)</span>}</p>
+                              </div>
+                          )
+                      })}
+                  </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- From App.tsx ---
+      const QUIZ_TIME_SECONDS = 30 * 60; // 30 minutes
+
+      const App = () => {
+        const [quizState, setQuizState] = useState('not-started');
+        const [userName, setUserName] = useState('');
+        const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+        const [answers, setAnswers] = useState({});
+        const [timeLeft, setTimeLeft] = useState(QUIZ_TIME_SECONDS);
+        const [score, setScore] = useState(0);
+
+        const answeredQuestions = useMemo(() => Object.keys(answers).length, [answers]);
+        const progress = useMemo(() => (answeredQuestions / TOTAL_QUESTIONS) * 100, [answeredQuestions]);
+        
+        const completedSections = useMemo(() => {
+          const completed = new Set();
+          sections.forEach((section, index) => {
+            const allAnswered = section.questions.every(q => answers[q.id] !== undefined);
+            if (allAnswered) {
+              completed.add(index);
+            }
+          });
+          return completed;
+        }, [answers]);
+        
+        const calculateScore = useCallback(() => {
+          let totalScore = 0;
+          sections.forEach(section => {
+            section.questions.forEach(q => {
+              const userAnswer = answers[q.id];
+              if (userAnswer === undefined) return;
+
+              let isCorrect = false;
+              switch (q.type) {
+                case 'single-choice':
+                  isCorrect = userAnswer === q.correctAnswer;
+                  break;
+                case 'multi-choice':
+                  const correct = q.correctAnswer;
+                  const user = userAnswer;
+                  isCorrect = correct.length === user.length && correct.every(val => user.includes(val));
+                  break;
+                case 'association':
+                case 'image-label':
+                  const correctAnswers = q.correctAnswer;
+                  const userAnswers = userAnswer;
+                  isCorrect = Object.keys(correctAnswers).length > 0 && 
+                              Object.keys(correctAnswers).every(key => correctAnswers[key] === userAnswers?.[key]);
+                  break;
+              }
+              if (isCorrect) {
+                totalScore += q.points;
+              }
+            });
+          });
+          return totalScore;
+        }, [answers]);
+
+        const handleSubmit = useCallback(() => {
+          setScore(calculateScore());
+          setQuizState('finished');
+        }, [calculateScore]);
+
+        useEffect(() => {
+          if (quizState !== 'in-progress') return;
+
+          const timer = setInterval(() => {
+            setTimeLeft(prevTime => {
+              if (prevTime <= 1) {
+                clearInterval(timer);
+                handleSubmit();
+                return 0;
+              }
+              return prevTime - 1;
+            });
+          }, 1000);
+
+          return () => clearInterval(timer);
+        }, [quizState, handleSubmit]);
+
+        const handleStartQuiz = (e) => {
+          e.preventDefault();
+          if (userName.trim()) {
+            setQuizState('in-progress');
+          }
+        };
+
+        const handleAnswerChange = (questionId, answer) => {
+          setAnswers(prev => ({ ...prev, [questionId]: answer }));
+        };
+        
+        const totalPoints = useMemo(() => sections.flatMap(s => s.questions).reduce((sum, q) => sum + q.points, 0), []);
+
+        if (quizState === 'not-started') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 max-w-lg w-full text-white text-center">
+                <h1 className="text-4xl font-bold mb-2">🌍 Teste de Geografia</h1>
+                <p className="text-lg opacity-80 mb-6">Península Ibérica e Quadro Natural</p>
+                <form onSubmit={handleStartQuiz}>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Digite o seu nome completo"
+                    className="w-full bg-white/20 placeholder-white/60 text-white px-4 py-3 rounded-lg border-2 border-transparent focus:border-white focus:outline-none transition mb-4"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-white text-purple-600 font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-opacity-90 transform hover:-translate-y-1 transition-all duration-300"
+                  >
+                    Iniciar Teste
+                  </button>
+                </form>
+              </div>
+            </div>
+          );
+        }
+
+        if (quizState === 'finished') {
+          return <Results name={userName} score={score} totalPoints={totalPoints} answers={answers} />;
+        }
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-800 text-white font-sans">
+            <div className="container mx-auto p-4 md:p-8">
+              <header className="mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Teste de Geografia</h1>
+                  <p className="text-gray-400">Aluno(a): {userName}</p>
+                </div>
+                <Timer timeLeft={timeLeft} />
+              </header>
+
+              <main className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-2xl p-1 md:p-2">
+                  <div className="p-4">
+                      <ProgressBar progress={progress} />
+                  </div>
+
+                  <nav className="flex flex-wrap border-b border-white/10 px-4">
+                      {sections.map((section, index) => (
+                          <button
+                              key={index}
+                              onClick={() => setActiveSectionIndex(index)}
+                              className={`py-3 px-4 text-sm md:text-base font-semibold flex items-center gap-2 transition-colors duration-300 ${activeSectionIndex === index ? 'border-b-2 border-purple-400 text-purple-400' : 'text-gray-400 hover:text-white'}`}
+                          >
+                              {section.title}
+                              {completedSections.has(index) && <span className="text-green-400">✓</span>}
+                          </button>
+                      ))}
+                  </nav>
+                  
+                  <div className="p-4 md:p-6 min-h-[50vh]">
+                      <QuizSection 
+                          section={sections[activeSectionIndex]}
+                          answers={answers}
+                          onAnswerChange={handleAnswerChange}
+                      />
+                  </div>
+              </main>
+
+              <footer className="mt-6 md:mt-8 flex justify-between items-center">
+                  <div className="text-sm text-gray-400">
+                      Questões respondidas: {answeredQuestions} / {TOTAL_QUESTIONS}
+                  </div>
+                  {progress === 100 && (
+                    <button
+                      onClick={handleSubmit}
+                      className="bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:scale-105 transform transition-all duration-300"
+                    >
+                      Finalizar e Ver Resultados
+                    </button>
+                  )}
+              </footer>
+            </div>
+          </div>
+        );
+      }
+
+      // --- From index.tsx ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    </script>
+  </body>
+</html>
